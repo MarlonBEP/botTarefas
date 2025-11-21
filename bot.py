@@ -1,7 +1,7 @@
 import os
 import sqlite3
 import logging
-from datetime import datetime, time
+from datetime import datetime
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -13,16 +13,15 @@ from telegram.ext import (
     filters,
 )
 
-# ------------------------------- LOG -----------------------------------------
-
+# LOG
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
 
-# ------------------------------- CONFIG --------------------------------------
-
-TOKEN = os.getenv("BOT_TOKEN")  # configure no Railway
+# CONFIG
+TOKEN = os.getenv("BOT_TOKEN")
 DB_PATH = "database.db"
 
 GROUP_NAME = "Organização Familia Porto Pedroso"
@@ -30,42 +29,36 @@ GROUP_NAME = "Organização Familia Porto Pedroso"
 DAILY_HOUR = 15
 MONTHLY_DAY = 6
 
-# Quanto queremos guardar por mês (meta)
 META_MENSAL = 1000
 
-# Intervalo dos periodic jobs (Railway não gosta de cron real, então simulamos)
-JOB_INTERVAL_SECONDS = 60  # a cada 1 minuto
+JOB_INTERVAL_SECONDS = 60
 
-# ------------------------------------------------------------------------------
-# DATABASE
-# ------------------------------------------------------------------------------
+
+# DATABASE -------------------------------------------------------------------
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
-    cur.execute(
-        """
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS financeiro (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             tipo TEXT,
             valor REAL,
             data TEXT
         )
-    """
-    )
+    """)
 
-    cur.execute(
-        """
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS grupos (
             id INTEGER PRIMARY KEY,
             group_id INTEGER
         )
-        """
-    )
+    """)
 
     conn.commit()
     conn.close()
+
 
 def add_finance(tipo, valor):
     conn = sqlite3.connect(DB_PATH)
@@ -76,6 +69,7 @@ def add_finance(tipo, valor):
     )
     conn.commit()
     conn.close()
+
 
 def get_resumo():
     conn = sqlite3.connect(DB_PATH)
@@ -90,8 +84,8 @@ def get_resumo():
     conn.close()
 
     guardado = entradas - saidas
-
     return entradas, saidas, guardado
+
 
 def save_group_id(chat_id):
     conn = sqlite3.connect(DB_PATH)
@@ -101,6 +95,7 @@ def save_group_id(chat_id):
     conn.commit()
     conn.close()
 
+
 def get_group_id():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -109,14 +104,14 @@ def get_group_id():
     conn.close()
     return row[0] if row else None
 
-# ------------------------------------------------------------------------------
-#   BOT LOGIC
-# ------------------------------------------------------------------------------
+
+# BOT LOGIC ------------------------------------------------------------------
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         f"Bem vindo ao {GROUP_NAME}!\nUse /menu para ver as opções."
     )
+
 
 async def cmd_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
@@ -124,7 +119,11 @@ async def cmd_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Adicionar Saída", callback_data="add_saida")],
         [InlineKeyboardButton("Resumo Atual", callback_data="resumo")],
     ]
-    await update.message.reply_text("Escolha uma opção:", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    await update.message.reply_text(
+        "Escolha uma opção:", reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
 
 async def callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -133,9 +132,11 @@ async def callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data == "add_entrada":
         await query.message.reply_text("Digite o valor da ENTRADA:")
         context.user_data["mode"] = "entrada"
+
     elif data == "add_saida":
         await query.message.reply_text("Digite o valor da SAÍDA:")
         context.user_data["mode"] = "saida"
+
     elif data == "resumo":
         entradas, saidas, guardado = get_resumo()
         await query.message.reply_text(
@@ -147,20 +148,23 @@ async def callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.answer()
 
+
 async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if "mode" in context.user_data:
-        try:
-            valor = float(update.message.text.replace(",", "."))
-        except:
-            await update.message.reply_text("Valor inválido. Tenta de novo.")
-            return
+    if "mode" not in context.user_data:
+        return
 
-        tipo = context.user_data["mode"]
-        add_finance(tipo, valor)
+    try:
+        valor = float(update.message.text.replace(",", "."))
+    except:
+        await update.message.reply_text("Valor inválido. Tenta de novo.")
+        return
 
-        await update.message.reply_text(f"{tipo.capitalize()} registrada com sucesso!")
+    tipo = context.user_data["mode"]
+    add_finance(tipo, valor)
 
-        del context.user_data["mode"]
+    await update.message.reply_text(f"{tipo.capitalize()} registrada com sucesso!")
+    del context.user_data["mode"]
+
 
 async def capture_group_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for m in update.message.new_chat_members:
@@ -168,9 +172,8 @@ async def capture_group_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
             save_group_id(update.message.chat_id)
             await update.message.reply_text("Grupo registrado com sucesso!")
 
-# ------------------------------------------------------------------------------
-#   NOTIFICAÇÕES AUTOMÁTICAS
-# ------------------------------------------------------------------------------
+
+# NOTIFICAÇÕES ---------------------------------------------------------------
 
 async def periodic_jobs(context: ContextTypes.DEFAULT_TYPE):
     group_id = get_group_id()
@@ -179,14 +182,12 @@ async def periodic_jobs(context: ContextTypes.DEFAULT_TYPE):
 
     now = datetime.now()
 
-    # diária
     if now.hour == DAILY_HOUR:
         await context.bot.send_message(
             chat_id=group_id,
             text="Lembrete diário: organizem as finanças hoje!"
         )
 
-    # mensal
     if now.day == MONTHLY_DAY and now.hour == DAILY_HOUR:
         entradas, saidas, guardado = get_resumo()
         await context.bot.send_message(
@@ -200,9 +201,8 @@ async def periodic_jobs(context: ContextTypes.DEFAULT_TYPE):
             )
         )
 
-# ------------------------------------------------------------------------------
-# MAIN
-# ------------------------------------------------------------------------------
+
+# MAIN -----------------------------------------------------------------------
 
 def main():
     init_db()
@@ -214,17 +214,19 @@ def main():
     app = ApplicationBuilder().token(TOKEN).build()
     job_queue = app.job_queue
 
+    # Handlers
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("menu", cmd_menu))
     app.add_handler(CallbackQueryHandler(callback_router))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, capture_group_id))
 
-    # inicia periodic job
+    # Jobs
     job_queue.run_repeating(periodic_jobs, interval=JOB_INTERVAL_SECONDS, first=10)
 
     print("Bot rodando bonitão...")
-    app.run_polling()
+    app.run_polling(close_loop=False)
+
 
 if __name__ == "__main__":
     main()
