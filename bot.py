@@ -1,24 +1,25 @@
 import os
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes
+from telegram.ext import filters
 
 TOKEN = os.environ.get("BOT_TOKEN")
 
-def start(update, context):
-    update.message.reply_text("Bot de tarefas ativado! Me envie atividades e eu organizo!")
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Bot de tarefas ativado! Me envie atividades e eu organizo!")
 
-def registrar(update, context):
+async def registrar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     texto = update.message.text
-    update.message.reply_text("Anotado! 👍")
+    await update.message.reply_text("Anotado! 👍")
 
-def main():
-    updater = Updater(TOKEN, use_context=True)
-    dp = updater.dispatcher
+async def main():
+    app = ApplicationBuilder().token(TOKEN).build()
 
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, registrar))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, registrar))
 
-    updater.start_polling()
-    updater.idle()
+    await app.run_polling()
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())
