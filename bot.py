@@ -447,7 +447,8 @@ def main():
         print("ERROR: set BOT_TOKEN env var")
         return
 
-    app = ApplicationBuilder().token(TOKEN).build()
+    app = Application.builder().token(TOKEN).build()
+    job_queue = app.job_queue
 
     # commands
     app.add_handler(CommandHandler("start", cmd_start))
