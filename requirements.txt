@@ -1,3 +1,2 @@
 python-telegram-bot==20.0
-python-dateutil
-python-telegram-bot[job-queue]
+apscheduler==3.10.1
