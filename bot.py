@@ -114,10 +114,11 @@ def get_group_id():
 # ------------------------------------------------------------------------------
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        f"Bem vindo ao {GROUP_NAME}!  
-Use /menu para ver as opções."
-    )
+await update.message.reply_text(
+    f"""Bem vindo ao {GROUP_NAME}!
+Use /menu para ver as opções."""
+)
+
 
 async def cmd_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
