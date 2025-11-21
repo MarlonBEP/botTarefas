@@ -182,19 +182,22 @@ async def periodic_jobs(context: ContextTypes.DEFAULT_TYPE):
     # diária
     if now.hour == DAILY_HOUR:
         await context.bot.send_message(
-            group_id, "Lembrete diário: organizem as finanças hoje!"
+            chat_id=group_id,
+            text="Lembrete diário: organizem as finanças hoje!"
         )
 
     # mensal
     if now.day == MONTHLY_DAY and now.hour == DAILY_HOUR:
         entradas, saidas, guardado = get_resumo()
         await context.bot.send_message(
-            group_id,
-            f"Resumo mensal do dia {MONTHLY_DAY}:\n"
-            f"Entradas: {entradas:.2f}\n"
-            f"Saídas: {saidas:.2f}\n"
-            f"Guardado: {guardado:.2f}\n"
-            f"Meta: {META_MENSAL:.2f}",
+            chat_id=group_id,
+            text=(
+                f"Resumo mensal do dia {MONTHLY_DAY}:\n"
+                f"Entradas: {entradas:.2f}\n"
+                f"Saídas: {saidas:.2f}\n"
+                f"Guardado: {guardado:.2f}\n"
+                f"Meta: {META_MENSAL:.2f}"
+            )
         )
 
 # ------------------------------------------------------------------------------
